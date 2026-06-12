@@ -69,7 +69,7 @@ Every finding needs: evidence (`file:line` references), impact, effort estimate 
 
 Present the vetted findings table to the user, ordered by leverage (impact ÷ effort, weighted by confidence):
 
-| # | Finding | Category | Impact | Effort | Risk | Evidence |
+| # | Finding | Category | Impact | Effort | Risk | Confidence | Evidence |
 
 Present **direction findings separately**, after the table — they're options for the maintainer to weigh, not problems ranked against bugs, and burying "build a plugin system" under "fix the N+1" serves neither. 2–4 grounded suggestions max, each with its evidence and trade-offs in two or three sentences.
 
