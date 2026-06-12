@@ -58,6 +58,8 @@ A run against [shadcn/ui](https://github.com/shadcn-ui/ui) came back with findin
 | 2 | O(n²) icon migration (migrate-icons.ts:168)    | perf      | S      | HIGH       |
 ```
 
+*(Columns abbreviated for the example — the full table also carries Impact, Risk, and Evidence.)*
+
 …and rejected a few, with reasons recorded so they don't come back next run:
 
 ```
