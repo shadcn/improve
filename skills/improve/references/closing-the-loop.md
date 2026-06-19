@@ -13,6 +13,9 @@ The founding rule survives unchanged: **the advisor never edits source code.** I
 - The repo is a git repository (worktree isolation requires it). If not: stop and say so.
 - The plan file exists and its dependencies show DONE in `plans/README.md`. If not: stop, name the missing dependency.
 - Run the plan's drift check yourself. If in-scope files changed since `Planned at`, reconcile the plan first (see below) — don't hand a stale plan to an executor.
+- **Capture the base the plan targets**: `git rev-parse HEAD` and `git branch --show-current`. This is the commit the plan was written against — usually the branch you're working on, which may be *ahead of the repo's default branch*. You need it because of the next point.
+
+> **Worktree base gotcha (read before dispatching).** Worktree isolation creates the executor's worktree from the repository's **default branch** (`origin/HEAD`, e.g. `main`/`master`) — *not* from the branch you currently have checked out. If you're working on a feature branch that's ahead of the default branch, the executor will otherwise start from stale code: missing your branch's commits, editing older versions of the in-scope files than the plan's `Planned at` excerpts describe, and producing a result branch that's behind and painful to merge. The dispatch below pins the worktree to the captured base SHA to prevent this. Do not skip it.
 
 ### Dispatch
 
@@ -21,10 +24,14 @@ Spawn **one** `general-purpose` subagent with `isolation: "worktree"`. Executor 
 The subagent prompt must contain:
 
 1. **The full plan file text, inlined.** The worktree contains only committed files — if `plans/` is uncommitted, the executor can't read it. Never assume; always inline.
-2. The executor preamble:
+2. **The base SHA captured in preconditions, with a pin-to-base instruction.** Worktree isolation may have created the worktree from the default branch rather than the commit this plan targets (see the gotcha above), so the executor's very first action must be to reposition its branch onto the right base. State the SHA explicitly and tell it to run, before anything else:
+   > `git reset --hard <BASE_SHA>` then `git rev-parse HEAD` to confirm HEAD now equals `<BASE_SHA>`. The worktree's branch has no commits of its own yet, so this just moves its starting point to the commit the plan was written against. If `<BASE_SHA>` is not found, STOP and report — do not proceed from the wrong base.
+3. The executor preamble:
 
-> You are the executor for the implementation plan below. Follow it step by
-> step. Run every verification command and confirm the expected result before
+> You are the executor for the implementation plan below. First pin your
+> worktree to the base commit as instructed above and confirm it, then follow
+> the plan step by step. Run every verification command and confirm the
+> expected result before
 > moving on. Touch only the files listed as in scope. If any STOP condition
 > occurs, stop immediately and report. Do not improvise around obstacles.
 > Commit your work in the worktree following the plan's git workflow section.
@@ -35,7 +42,7 @@ The subagent prompt must contain:
 > skipped, say so plainly. When finished, reply with exactly the report
 > format below.
 
-3. The report format:
+4. The report format:
 
 ```
 STATUS: COMPLETE | STOPPED
@@ -51,10 +58,11 @@ Note on fresh worktrees: they share git history but not `node_modules` or build 
 
 Review like a tech lead reviewing a PR against the spec — never fix anything yourself:
 
-1. **Re-run every done criterion** in the worktree. Don't trust the executor's report — verify.
-2. **Scope compliance**: `git -C <worktree> diff --stat` against the plan's in-scope list. Any file outside scope fails review, full stop.
-3. **Read the full diff.** Judge it against "Why this matters" (does it solve the actual problem?) and the repo conventions named in the plan (does it look like the rest of the codebase?).
-4. **Audit the new tests.** Executors game criteria — a test that asserts nothing meaningful passes `pnpm test` and proves nothing. Read what the tests assert.
+1. **Confirm the base** before anything else: `git -C <worktree> merge-base HEAD <BASE_SHA>` must equal `<BASE_SHA>` — i.e. the executor's work sits on top of the commit the plan targeted, not the default branch. If it doesn't, the pin-to-base step was skipped or failed; the diff and done criteria are untrustworthy, so BLOCK and re-dispatch rather than reviewing stale work.
+2. **Re-run every done criterion** in the worktree. Don't trust the executor's report — verify.
+3. **Scope compliance**: `git -C <worktree> diff --stat <BASE_SHA>..HEAD` against the plan's in-scope list — diff from the captured base so the executor's commits are isolated from the default-branch delta. Any file outside scope fails review, full stop.
+4. **Read the full diff.** Judge it against "Why this matters" (does it solve the actual problem?) and the repo conventions named in the plan (does it look like the rest of the codebase?).
+5. **Audit the new tests.** Executors game criteria — a test that asserts nothing meaningful passes `pnpm test` and proves nothing. Read what the tests assert.
 
 ### Verdict
 
