@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from 'fs';
 
 class ImproveReviewPlanTool {
   constructor() {
-    this.name = 'improve_review_plan';
+    this.name = 'improve-review-plan';
   }
 
   async execute(params) {
@@ -12,14 +12,14 @@ class ImproveReviewPlanTool {
       return { error: 'Missing required parameter: plan_path. Provide the absolute path to the .md plan file.' };
     }
     if (!existsSync(planPath)) {
-      return { error: `File does not exist: ${planPath}` };
+      return { error: 'File does not exist: ' + planPath };
     }
 
     let content;
     try {
       content = readFileSync(planPath, 'utf8');
     } catch (e) {
-      return { error: `Cannot read file: ${e.message}` };
+      return { error: 'Cannot read file: ' + e.message };
     }
 
     const checks = [];
@@ -32,7 +32,7 @@ class ImproveReviewPlanTool {
       pass: hasExecutorInstructions,
       detail: hasExecutorInstructions
         ? 'Found executor instructions block.'
-        : 'Missing executor instructions. Add a blockquote at the top: "> You are the executor for the implementation plan below..."'
+        : 'Missing executor instructions. Add a blockquote at the top.'
     });
 
     // 2. Drift check
@@ -43,7 +43,7 @@ class ImproveReviewPlanTool {
       pass: hasDriftCheck,
       detail: hasDriftCheck
         ? 'Found drift check command.'
-        : 'Missing drift check. Add: "**Drift check (run first)**: `git diff --stat <SHA>..HEAD -- <paths>`"'
+        : 'Missing drift check. Add: **Drift check (run first)**: git diff --stat SHA..HEAD -- paths'
     });
 
     // 3. Self-contained context (current state excerpts)
@@ -53,9 +53,9 @@ class ImproveReviewPlanTool {
       dimension: 'Self-Contained Context',
       description: 'Plan includes current state code excerpts so executor has zero context dependency',
       pass: hasCurrentState && hasCodeExcerpts,
-      detail: hasCurrentState && hasCodeExcerpts
+      detail: (hasCurrentState && hasCodeExcerpts)
         ? 'Found current state section with code excerpts.'
-        : `Missing ${!hasCurrentState ? 'current state section' : ''} ${!hasCodeExcerpts ? 'code excerpts' : ''}. Include relevant code blocks from the files being changed.`
+        : 'Missing current state section or code excerpts.'
     });
 
     // 4. Verification gates
@@ -65,9 +65,9 @@ class ImproveReviewPlanTool {
       dimension: 'Verification Gates',
       description: 'Every step ends with a command and expected result; plan includes repo test/build/lint commands',
       pass: hasVerificationGates && hasTestCommand,
-      detail: hasVerificationGates && hasTestCommand
+      detail: (hasVerificationGates && hasTestCommand)
         ? 'Found verification gates with test commands.'
-        : `Missing ${!hasVerificationGates ? 'verification gates section' : ''} ${!hasTestCommand ? 'test command' : ''}. Add: "Verification: npm test" etc.`
+        : 'Missing verification gates section or test command.'
     });
 
     // 5. STOP conditions
@@ -77,8 +77,8 @@ class ImproveReviewPlanTool {
       description: 'Plan has explicit STOP conditions for when reality doesn\'t match the plan',
       pass: hasStopConditions,
       detail: hasStopConditions
-        : 'Found STOP conditions section.'
-        : 'Missing STOP conditions. Add a section listing when the executor should stop and report instead of improvising.'
+        ? 'Found STOP conditions section.'
+        : 'Missing STOP conditions. Add a section listing when the executor should stop and report.'
     });
 
     // 6. Out of scope
@@ -88,8 +88,8 @@ class ImproveReviewPlanTool {
       description: 'Plan explicitly lists what is NOT in scope to prevent scope creep',
       pass: hasOutOfScope,
       detail: hasOutOfScope
-        : 'Found out-of-scope section.'
-        : 'Missing out-of-scope boundaries. Add: "## Out of scope" listing what the executor should NOT do.'
+        ? 'Found out-of-scope section.'
+        : 'Missing out-of-scope boundaries. Add: ## Out of scope listing what the executor should NOT do.'
     });
 
     // 7. Numbered steps
@@ -99,8 +99,8 @@ class ImproveReviewPlanTool {
       description: 'Plan has clear numbered implementation steps',
       pass: numberedSteps.length >= 3,
       detail: numberedSteps.length >= 3
-        ? `Found ${numberedSteps.length} numbered steps.`
-        : `Only ${numberedSteps.length} numbered steps found. Aim for 3-7 clear steps.`
+        ? 'Found ' + numberedSteps.length + ' numbered steps.'
+        : 'Only ' + numberedSteps.length + ' numbered steps found. Aim for 3-7 clear steps.'
     });
 
     // 8. Why this matters
@@ -111,18 +111,19 @@ class ImproveReviewPlanTool {
       pass: hasWhy,
       detail: hasWhy
         ? 'Found motivation section.'
-        : 'Missing "Why this matters" section. Explain the impact so the executor understands priority.'
+        : 'Missing Why this matters section. Explain the impact so the executor understands priority.'
     });
 
     // 9. Status metadata
     const hasPriority = content.includes('**Priority**');
     const hasEffort = content.includes('**Effort**');
     const hasRisk = content.includes('**Risk**');
+    const metaDetail = 'Priority: ' + (hasPriority ? 'Y' : 'N') + ', Effort: ' + (hasEffort ? 'Y' : 'N') + ', Risk: ' + (hasRisk ? 'Y' : 'N');
     checks.push({
       dimension: 'Status Metadata',
       description: 'Plan includes Priority, Effort, and Risk fields',
       pass: hasPriority && hasEffort && hasRisk,
-      detail: `Priority: ${hasPriority ? '✅' : '❌'}, Effort: ${hasEffort ? '✅' : '❌'}, Risk: ${hasRisk ? '✅' : '❌'}`
+      detail: metaDetail
     });
 
     // 10. File naming convention
@@ -133,32 +134,32 @@ class ImproveReviewPlanTool {
       description: 'Plan file follows NNN-slug.md naming convention',
       pass: hasCorrectNaming,
       detail: hasCorrectNaming
-        ? `Filename "${filename}" follows convention.`
-        : `Filename "${filename}" should match NNN-slug.md (e.g. 001-fix-n-plus-one.md).`
+        ? 'Filename "' + filename + '" follows convention.'
+        : 'Filename "' + filename + '" should match NNN-slug.md (e.g. 001-fix-n-plus-one.md).'
     });
 
     // Score
     const passed = checks.filter(c => c.pass).length;
     const total = checks.length;
-    const score = `${passed}/${total}`;
+    const score = passed + '/' + total;
 
     let verdict;
-    if (passed === total) verdict = 'EXCELLENT — Plan is fully compliant with the shadcn/improve handoff template.';
-    else if (passed >= 8) verdict = 'GOOD — Minor issues. Fix the flagged items before dispatching.';
-    else if (passed >= 5) verdict = 'NEEDS WORK — Several missing dimensions. Review and strengthen the plan.';
-    else verdict = 'INCOMPLETE — Major gaps. Re-write against the plan template.';
+    if (passed === total) verdict = 'EXCELLENT';
+    else if (passed >= 8) verdict = 'GOOD';
+    else if (passed >= 5) verdict = 'NEEDS WORK';
+    else verdict = 'INCOMPLETE';
 
     return {
       success: true,
       plan_file: filename,
       plan_path: planPath,
-      score,
-      verdict,
-      checks,
+      score: score,
+      verdict: verdict,
+      checks: checks,
       failed_checks: checks.filter(c => !c.pass),
       passed_checks: checks.filter(c => c.pass),
       template_reference: 'https://github.com/shadcn/improve/blob/main/skills/improve/references/plan-template.md',
-      message: `${verdict} Score: ${score}`
+      message: verdict + ' Score: ' + score
     };
   }
 }
