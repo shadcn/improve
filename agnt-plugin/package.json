@@ -1,0 +1,7 @@
+{
+  "name": "improve",
+  "version": "1.0.0",
+  "description": "Codebase audit and implementation planning plugin. Adopts the shadcn/improve agent skill for AGNT.",
+  "type": "module",
+  "keywords": ["audit", "codebase", "planning", "agent-skill"]
+}

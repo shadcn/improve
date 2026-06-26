@@ -1,0 +1,143 @@
+{
+  "name": "improve",
+  "displayName": "Improve — Codebase Audit & Planning",
+  "version": "1.0.0",
+  "description": "Adaptation of shadcn/improve agent skill for AGNT. Audits any codebase and writes prioritized, self-contained implementation plans for other agents to execute. Never edits source code — the plan is the product.",
+  "author": "shadcn (adapted by jacksonjp0311-gif)",
+  "icon": "search",
+  "homepage": "https://github.com/shadcn/improve",
+  "repository": "https://github.com/jacksonjp0311-gif/improve-AGNT",
+  "license": "MIT",
+  "tools": [
+    {
+      "type": "improve-audit",
+      "entryPoint": "./tools/improve-audit.js",
+      "schema": {
+        "title": "Audit Codebase",
+        "description": "Run a full or focused audit of a codebase directory. Maps the repo structure, conventions, build/test/lint commands, then scans for bugs, security issues, performance problems, test gaps, and tech debt. Returns a prioritized findings table with evidence (file:line references).",
+        "category": "action",
+        "icon": "search",
+        "parameters": {
+          "repo_path": {
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository root to audit"
+          },
+          "mode": {
+            "type": "string",
+            "inputType": "select",
+            "description": "Audit depth",
+            "options": [
+              "quick",
+              "full",
+              "deep",
+              "security",
+              "perf",
+              "tests",
+              "bugs"
+            ],
+            "default": "full"
+          },
+          "focus_paths": {
+            "type": "string",
+            "description": "Optional comma-separated list of specific file or directory paths to scope the audit (e.g. 'src/api/,src/auth/')"
+          }
+        }
+      }
+    },
+    {
+      "type": "improve-plan",
+      "entryPoint": "./tools/improve-plan.js",
+      "schema": {
+        "title": "Write Implementation Plan",
+        "description": "Given a finding or improvement description, produce a self-contained implementation plan in the shadcn/improve handoff format. The plan includes current state excerpts, exact steps, verification gates, STOP conditions, and out-of-scope boundaries. Written for a zero-context executor agent.",
+        "category": "action",
+        "icon": "file-text",
+        "parameters": {
+          "finding": {
+            "type": "string",
+            "inputType": "textarea",
+            "required": true,
+            "description": "The finding or improvement to plan. Include file:line references and why it matters."
+          },
+          "repo_path": {
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository root"
+          },
+          "plan_number": {
+            "type": "integer",
+            "description": "Plan number for the NNN-slug.md filename (auto-incremented if omitted)",
+            "default": 0
+          },
+          "output_dir": {
+            "type": "string",
+            "description": "Directory to write the plan file (default: <repo>/plans/)",
+            "default": ""
+          }
+        }
+      }
+    },
+    {
+      "type": "improve-reconcile",
+      "entryPoint": "./tools/improve-reconcile.js",
+      "schema": {
+        "title": "Reconcile Plan Backlog",
+        "description": "Scan the plans/ directory and reconcile the backlog: verify which plans landed (git log), refresh plans whose target files drifted, unblock plans whose dependencies are now done, and retire stale ones. Produces an updated plans/README.md index.",
+        "category": "action",
+        "icon": "refresh-cw",
+        "parameters": {
+          "repo_path": {
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository root"
+          },
+          "plans_dir": {
+            "type": "string",
+            "description": "Path to plans directory (default: <repo>/plans/)",
+            "default": ""
+          }
+        }
+      }
+    },
+    {
+      "type": "improve-review-plan",
+      "entryPoint": "./tools/improve-review-plan.js",
+      "schema": {
+        "title": "Review / Critique Plan",
+        "description": "Read an existing plan file and critique it against the shadcn/improve handoff plan template. Checks for self-contained context, verification gates, hard boundaries, STOP conditions, and drift. Returns a structured review with pass/fail per dimension.",
+        "category": "action",
+        "icon": "check-circle",
+        "parameters": {
+          "plan_path": {
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the .md plan file to review"
+          }
+        }
+      }
+    },
+    {
+      "type": "improve-branch-audit",
+      "entryPoint": "./tools/improve-branch-audit.js",
+      "schema": {
+        "title": "Audit Branch Changes",
+        "description": "Audit only what the current git branch changes compared to its base branch. Useful before a PR — finds issues introduced by the branch, checks plan alignment, and flags scope creep.",
+        "category": "action",
+        "icon": "git-branch",
+        "parameters": {
+          "repo_path": {
+            "type": "string",
+            "required": true,
+            "description": "Absolute path to the repository root"
+          },
+          "base_branch": {
+            "type": "string",
+            "description": "Branch to diff against (default: main)",
+            "default": "main"
+          }
+        }
+      }
+    }
+  ]
+}

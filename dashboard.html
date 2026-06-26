@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Improve Plugin — AGNT Integration Dashboard</title>
+<style>
+  :root {
+    --bg: #0d0d1a;
+    --surface: #161628;
+    --surface-2: #1e1e36;
+    --border: rgba(255,255,255,0.08);
+    --text: #e0e0f0;
+    --text-dim: #8888aa;
+    --pink: #e53d8f;
+    --cyan: #12e0ff;
+    --green: #19ef83;
+    --gold: #ffd700;
+    --purple: #7d3de5;
+    --orange: #ff9500;
+    --red: #ff4466;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px;
+    line-height: 1.6;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--pink), var(--cyan), var(--green));
+  }
+  .card-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  .card-value { font-size: 36px; font-weight: 700; letter-spacing: -1px; }
+  .card-sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+  .span-3 { grid-column: span 3; }
+  .span-4 { grid-column: span 4; }
+  .span-6 { grid-column: span 6; }
+  .span-8 { grid-column: span 8; }
+  .span-12 { grid-column: span 12; }
+
+  .status-dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+  .status-dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  .tool-list { list-style: none; }
+  .tool-list li {
+    padding: 10px 12px; margin: 6px 0;
+    background: var(--surface-2); border-radius: 8px;
+    border-left: 3px solid var(--cyan);
+    font-size: 13px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .tool-list li .badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 10px;
+    background: rgba(18, 224, 255, 0.15); color: var(--cyan);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  .progress-bar {
+    height: 6px; background: var(--surface-2);
+    border-radius: 3px; margin-top: 8px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--green), var(--cyan));
+  }
+
+  .checklist { list-style: none; }
+  .checklist li {
+    padding: 8px 0; font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .check-icon {
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; flex-shrink: 0;
+  }
+  .check-icon.done { background: rgba(25, 239, 131, 0.15); color: var(--green); }
+  .check-icon.warn { background: rgba(255, 215, 0, 0.15); color: var(--gold); }
+
+  .code-block {
+    background: var(--surface-2); border-radius: 8px;
+    padding: 12px 16px; font-size: 12px; color: var(--cyan);
+    overflow-x: auto; margin: 8px 0;
+    font-family: 'SF Mono', 'Cascadia Code', monospace;
+    white-space: pre-wrap;
+  }
+
+  .metric-row {
+    display: flex; justify-content: space-between;
+    padding: 6px 0; font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .metric-row:last-child { border: none; }
+  .metric-label { color: var(--text-dim); }
+  .metric-value { font-weight: 600; }
+
+  .section-title {
+    font-size: 14px; font-weight: 600;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title .icon { font-size: 18px; }
+
+  .header-bar {
+    text-align: center; padding: 24px 0 32px;
+    border-bottom: 1px solid var(--border); margin-bottom: 24px;
+  }
+  .header-bar h1 {
+    font-size: 28px; font-weight: 700;
+    background: linear-gradient(90deg, var(--pink), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .header-bar p { color: var(--text-dim); font-size: 14px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    text-align: left; padding: 8px;
+    color: var(--text-dim); text-transform: uppercase;
+    font-size: 10px; letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 8px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+
+  .tag {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 4px; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .tag-pink { background: rgba(229, 61, 143, 0.15); color: var(--pink); }
+  .tag-cyan { background: rgba(18, 224, 255, 0.15); color: var(--cyan); }
+  .tag-green { background: rgba(25, 239, 131, 0.15); color: var(--green); }
+  .tag-gold { background: rgba(255, 215, 0, 0.15); color: var(--gold); }
+  .tag-purple { background: rgba(125, 61, 229, 0.15); color: var(--purple); }
+  .tag-red { background: rgba(255, 68, 102, 0.15); color: var(--red); }
+
+  .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 120px; padding: 8px 0; }
+  .bar {
+    flex: 1; border-radius: 4px 4px 0 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    font-size: 10px; font-weight: 600; color: var(--bg);
+    min-height: 20px; padding-bottom: 4px;
+  }
+  .bar-label { font-size: 9px; color: var(--text-dim); margin-top: 4px; }
+
+  .severity-high { background: var(--red); }
+  .severity-med { background: var(--orange); }
+  .severity-low { background: var(--green); }
+</style>
+</head>
+<body>
+
+<div class="header-bar">
+  <h1>Improve Plugin — AGNT Integration Dashboard</h1>
+  <p>shadcn/improve agent skill adapted as 5 native AGNT workflow tools</p>
+  <p style="margin-top: 8px;">
+    <span class="status-dot green"></span>
+    <span style="color: var(--green); font-size: 13px;">Plugin Active — v1.0.0 — 5 tools verified working</span>
+  </p>
+</div>
+
+<div class="grid">
+
+  <!-- Health Overview -->
+  <div class="card span-3">
+    <div class="card-header">AGNT Server</div>
+    <div class="card-value" style="color: var(--green); font-size: 28px;">OK</div>
+    <div class="card-sub">v0.5.17 — Port 3333</div>
+    <div class="progress-bar"><div class="progress-fill" style="width: 100%;"></div></div>
+  </div>
+
+  <div class="card span-3">
+    <div class="card-header">Plugin Version</div>
+    <div class="card-value" style="color: var(--cyan);">1.0.0</div>
+    <div class="card-sub">improve — Codebase Audit & Planning</div>
+    <div class="progress-bar"><div class="progress-fill" style="width: 100%;"></div></div>
+  </div>
+
+  <div class="card span-3">
+    <div class="card-header">Tools Loaded</div>
+    <div class="card-value" style="color: var(--pink);">5/5</div>
+    <div class="card-sub">All verified working</div>
+    <div class="progress-bar"><div class="progress-fill" style="width: 100%;"></div></div>
+  </div>
+
+  <div class="card span-3">
+    <div class="card-header">Build Artifact</div>
+    <div class="card-value" style="color: var(--gold);">12.5<span style="font-size: 16px;"> KB</span></div>
+    <div class="card-sub">improve.agnt — 8 files bundled</div>
+    <div class="progress-bar"><div class="progress-fill" style="width: 100%;"></div></div>
+  </div>
+
+  <!-- Audit Results -->
+  <div class="card span-8">
+    <div class="section-title"><span class="icon">search</span> Live Audit Results — AGNT Backend</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div>
+        <div class="card-header">Severity Breakdown</div>
+        <div class="bar-chart">
+          <div class="bar severity-high" style="height: 74%;">74</div>
+          <div class="bar severity-med" style="height: 26%;">26</div>
+          <div class="bar severity-low" style="height: 95%;">95</div>
+        </div>
+        <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--text-dim);">
+          <span><span style="color: var(--red);">●</span> HIGH</span>
+          <span><span style="color: var(--orange);">●</span> MED</span>
+          <span><span style="color: var(--green);">●</span> LOW</span>
+        </div>
+      </div>
+      <div>
+        <div class="card-header">Category Breakdown</div>
+        <div class="metric-row">
+          <span class="metric-label">Tech Debt</span>
+          <span class="metric-value" style="color: var(--gold);">95</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Correctness / Bugs</span>
+          <span class="metric-value" style="color: var(--red);">56</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Performance</span>
+          <span class="metric-value" style="color: var(--orange);">26</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Security</span>
+          <span class="metric-value" style="color: var(--red);">18</span>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top: 12px; font-size: 12px; color: var(--text-dim);">
+      Scanned 1,091 files in full mode — 195 total findings
+    </div>
+  </div>
+
+  <!-- Tool Test Results -->
+  <div class="card span-4">
+    <div class="section-title"><span class="icon">check-circle</span> Tool Verification</div>
+    <ul class="checklist">
+      <li>
+        <span class="check-icon done">✓</span>
+        <div>
+          <strong>improve_audit</strong>
+          <div style="color: var(--text-dim); font-size: 11px;">195 findings, 4 categories, 1,091 files scanned</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon done">✓</span>
+        <div>
+          <strong>improve_plan</strong>
+          <div style="color: var(--text-dim); font-size: 11px;">Wrote plan to plans/002-test-finding-for-validation.md</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon done">✓</span>
+        <div>
+          <strong>improve_review_plan</strong>
+          <div style="color: var(--text-dim); font-size: 11px;">Score 8/10 — GOOD (2 dimensions need work)</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon done">✓</span>
+        <div>
+          <strong>improve_reconcile</strong>
+          <div style="color: var(--text-dim); font-size: 11px;">2 plans found, 3 actions taken, index rebuilt</div>
+        </div>
+      </li>
+      <li>
+        <span class="check-icon warn">!</span>
+        <div>
+          <strong>improve_branch_audit</strong>
+          <div style="color: var(--text-dim); font-size: 11px;">Works correctly — warns when on main branch</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Tools Detail -->
+  <div class="card span-6">
+    <div class="section-title"><span class="icon">wrench</span> Tool Schema Registry</div>
+    <ul class="tool-list">
+      <li>
+        <div>
+          <strong>improve_audit</strong>
+          <div style="color: var(--text-dim); font-size: 11px; margin-top: 2px;">repo_path · mode (7 options) · focus_paths</div>
+        </div>
+        <span class="badge">scan</span>
+      </li>
+      <li>
+        <div>
+          <strong>improve_plan</strong>
+          <div style="color: var(--text-dim); font-size: 11px; margin-top: 2px;">finding · repo_path · plan_number · output_dir</div>
+        </div>
+        <span class="badge">write</span>
+      </li>
+      <li>
+        <div>
+          <strong>improve_reconcile</strong>
+          <div style="color: var(--text-dim); font-size: 11px; margin-top: 2px;">repo_path · plans_dir</div>
+        </div>
+        <span class="badge">sync</span>
+      </li>
+      <li>
+        <div>
+          <strong>improve_review_plan</strong>
+          <div style="color: var(--text-dim); font-size: 11px; margin-top: 2px;">plan_path</div>
+        </div>
+        <span class="badge">review</span>
+      </li>
+      <li>
+        <div>
+          <strong>improve_branch_audit</strong>
+          <div style="color: var(--text-dim); font-size: 11px; margin-top: 2px;">repo_path · base_branch</div>
+        </div>
+        <span class="badge">branch</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Git Status -->
+  <div class="card span-6">
+    <div class="section-title"><span class="icon">git-branch</span> Git Status — improve-AGNT</div>
+    <div class="metric-row">
+      <span class="metric-label">Latest Commit</span>
+      <span class="metric-value" style="font-size: 11px; color: var(--cyan);">0bc98a2</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Message</span>
+      <span class="metric-value" style="font-size: 11px;">fix: hyphenated tool types + syntax fix</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">PR Branch</span>
+      <span class="metric-value" style="font-size: 11px; color: var(--purple);">feat/agnt-plugin-adaptation</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">PR Target</span>
+      <span class="metric-value" style="font-size: 11px;">shadcn/improve ← main</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Files Changed</span>
+      <span class="metric-value" style="color: var(--green);">8 files, +1,149 lines</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">PR Status</span>
+      <span class="metric-value" style="color: var(--gold);">Needs manual creation (no gh CLI)</span>
+    </div>
+  </div>
+
+  <!-- Architecture -->
+  <div class="card span-12">
+    <div class="section-title"><span class="icon">layers</span> Architecture — Before vs After</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div>
+        <div class="card-header" style="color: var(--gold);">BEFORE — shadcn/improve (Claude skill)</div>
+        <div class="code-block">/improve                        → Claude reads repo
+/improve quick                  → Cheap pass, hotspots only
+/improve security               → Focused security scan
+/improve plan &lt;desc&gt;             → Skip audit, spec one thing
+/improve execute &lt;plan&gt;         → Dispatch executor subagent
+/improve reconcile              → Refresh backlog
+  ↓
+Plans written to plans/NNN-slug.md
+  ↓
+Human or agent implements
+
+Limitations:
+• Claude-only (no other agent)
+• Text-based slash commands
+• No structured tool schemas
+• No programmatic integration
+• No composability in workflows</div>
+      </div>
+      <div>
+        <div class="card-header" style="color: var(--green);">AFTER — AGNT Plugin (5 native tools)</div>
+        <div class="code-block">improve_audit                  → Full/focused codebase scan
+  ├─ Maps stack, conventions, commands
+  ├─ Scans bugs/security/perf/tests/debt
+  └─ Returns prioritized findings table
+
+improve_plan                   → Self-contained handoff plan
+  ├─ Current state excerpts
+  ├─ Verification gates + STOP conditions
+  └─ Writes plans/NNN-slug.md
+
+improve_reconcile              → Backlog reconciliation
+  ├─ Git log drift detection
+  ├─ Landing verification
+  └─ Rebuilds plans/README.md index
+
+improve_review_plan            → 10-dimension plan critique
+improve_branch_audit           → PR-ready branch scan
+
+Advantages:
+• Any AGNT agent can call these tools
+• Structured JSON input/output
+• Composable in workflows
+• Programmatic API access
+• 195 findings in 1,091 files (live test)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- What We Learned -->
+  <div class="card span-6">
+    <div class="section-title"><span class="icon">lightbulb</span> What We Learned</div>
+    <ul class="checklist">
+      <li>
+        <span class="check-icon done">✓</span>
+        <span>AGNT plugin tools need <strong>hyphenated</strong> type names (improve-audit not improve_audit)</span>
+      </li>
+      <li>
+        <span class="check-icon done">✓</span>
+        <span>Tool execution via <code>/tools/&lt;name&gt;/execute</code> — hyphenated names only</span>
+      </li>
+      <li>
+        <span class="check-icon done">✓</span>
+        <span>AGNT v0.5.17 — plugin system is mature, 56 plugins installed</span>
+      </li>
+      <li>
+        <span class="check-icon done">✓</span>
+        <span>shadcn/improve maps cleanly to 5 discrete, composable tools</span>
+      </li>
+      <li>
+        <span class="check-icon done">✓</span>
+        <span>Audit found 195 issues in AGNT backend — real utility</span>
+      </li>
+      <li>
+        <span class="check-icon done">✓</span>
+        <span>Plan review scores 8/10 — template compliance checking works</span>
+      </li>
+      <li>
+        <span class="check-icon done">✓</span>
+        <span>No <code>gh</code> CLI on this machine — PR needs manual creation</span>
+      </li>
+      <li>
+        <span class="check-icon done">✓</span>
+        <span>Pure JS plugins need zero dependencies — 12.5 KB total</span>
+      </li>
+    </ul>
+  </div>
+
+  <!-- PR Link -->
+  <div class="card span-6">
+    <div class="section-title"><span class="icon">external-link</span> Pull Request to shadcn/improve</div>
+    <div style="text-align: center; padding: 16px 0;">
+      <div style="font-size: 48px; margin-bottom: 12px;">🔗</div>
+      <p style="color: var(--text-dim); font-size: 13px; margin-bottom: 16px;">
+        Branch <strong style="color: var(--purple);">feat/agnt-plugin-adaptation</strong> is pushed and ready.
+        No <code>gh</code> CLI available — PR must be created manually.
+      </p>
+      <a href="https://github.com/shadcn/improve/compare/main...jacksonjp0311-gif:feat/agnt-plugin-adaptation?expand=1"
+         style="display: inline-block; background: var(--pink); color: white; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600;">
+        Open PR on GitHub →
+      </a>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="card span-12">
+    <div class="section-title"><span class="icon">clock</span> Build Timeline</div>
+    <table>
+      <thead>
+        <tr><th>Step</th><th>What</th><th>Result</th><th>Duration</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="tag tag-cyan">1</span></td><td>Read shadcn/improve repo (SKILL.md, references, examples)</td><td>Understood skill structure & handoff format</td><td>~10 min</td></tr>
+        <tr><td><span class="tag tag-cyan">2</span></td><td>Designed 5-tool mapping for AGNT</td><td>audit, plan, reconcile, review, branch</td><td>~5 min</td></tr>
+        <tr><td><span class="tag tag-pink">3</span></td><td>Wrote manifest.json + 5 tool JS files</td><td>5 tools, 12 params, ~41 KB total code</td><td>~60 min</td></tr>
+        <tr><td><span class="tag tag-pink">4</span></td><td>Fixed hyphenated tool names</td><td>AGNT execution requires kebab-case</td><td>~10 min</td></tr>
+        <tr><td><span class="tag tag-green">5</span></td><td>Built plugin (build-plugin.js)</td><td>improve.agnt — 12.5 KB, 8 files</td><td>~30 sec</td></tr>
+        <tr><td><span class="tag tag-green">6</span></td><td>Installed to AGNT + reloaded</td><td>5 tools active, schemas validated</td><td>~5 sec</td></tr>
+        <tr><td><span class="tag tag-green">7</span></td><td>Tested all 5 tools end-to-end</td><td>All verified working</td><td>~5 min</td></tr>
+        <tr><td><span class="tag tag-purple">8</span></td><td>Pushed to improve-AGNT repo</td><td>Commit 0bc98a2, 8 files, +1,149 lines</td><td>~10 sec</td></tr>
+        <tr><td><span class="tag tag-purple">9</span></td><td>Pushed PR branch</td><td>feat/agnt-plugin-adaptation → fork</td><td>~5 sec</td></tr>
+        <tr><td><span class="tag tag-gold">10</span></td><td>PR to shadcn/improve</td><td><span style="color: var(--gold);">Needs manual creation</span></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+</body>
+</html>
