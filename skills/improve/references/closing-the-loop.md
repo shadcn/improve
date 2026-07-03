@@ -49,12 +49,12 @@ NOTES: anything the reviewer should know (deviations, surprises, judgment calls)
 
 Note on fresh worktrees: they share git history but not `node_modules` or build artifacts — the executor must install dependencies first, and check tooling that resolves from `dist/` may need one build even though the plan's command table (recon'd in the main tree) didn't mention it. Expect this; it isn't a deviation.
 
-Review like a tech lead reviewing a PR against the spec — never fix anything yourself:
+Review like a tech lead reviewing a PR against the spec — never fix anything yourself, and read before you run: re-running the done criteria executes the executor's code (including its test files) with your privileges, so scope, diff, and tests come first:
 
-1. **Re-run every done criterion** in the worktree. Don't trust the executor's report — verify.
-2. **Scope compliance**: `git -C <worktree> diff --stat` against the plan's in-scope list. Any file outside scope fails review, full stop.
-3. **Read the full diff.** Judge it against "Why this matters" (does it solve the actual problem?) and the repo conventions named in the plan (does it look like the rest of the codebase?).
-4. **Audit the new tests.** Executors game criteria — a test that asserts nothing meaningful passes `pnpm test` and proves nothing. Read what the tests assert.
+1. **Scope compliance**: `git -C <worktree> diff --stat` against the plan's in-scope list. Any file outside scope fails review, full stop.
+2. **Read the full diff.** Judge it against "Why this matters" (does it solve the actual problem?) and the repo conventions named in the plan (does it look like the rest of the codebase?).
+3. **Audit the new tests.** Executors game criteria — a test that asserts nothing meaningful passes `pnpm test` and proves nothing. Read what the tests assert.
+4. **Re-run every done criterion** in the worktree. Don't trust the executor's report — verify.
 
 ### Verdict
 
@@ -66,7 +66,7 @@ Review like a tech lead reviewing a PR against the spec — never fix anything y
 | **REVISE** | Fixable gaps | SendMessage to the same executor with specific, actionable feedback ("criterion 3 fails: X; the error handling in `api.ts:90` swallows the error — use the Result pattern per the plan"). **Max 2 revision rounds**, then BLOCK. |
 | **BLOCK** | STOP condition hit, scope violated unrecoverably, or revisions exhausted | Mark BLOCKED in the index with the reason. Refine or rewrite the plan with what was learned. Tell the user what happened and what changed in the plan. |
 
-Running verification commands inside the executor's worktree is fine — it's isolated and disposable. The no-mutating-commands rule protects the user's working tree, not the worktree.
+Running verification commands inside the executor's worktree is still fine — a git worktree isolates the user's working tree, not the host, so verification runs with your full user privileges (network, env, credentials). That's why the review reads the diff and tests before re-running anything.
 
 ---
 
