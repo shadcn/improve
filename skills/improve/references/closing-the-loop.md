@@ -45,6 +45,20 @@ FILES CHANGED: list
 NOTES: anything the reviewer should know (deviations, surprises, judgment calls)
 ```
 
+### Dispatch variant — headless coding CLI
+
+Not every host can spawn worktree-isolated subagents. If yours can't (or the user asks for a specific external executor), dispatch a **headless coding CLI** instead — the contract is identical, you just create the isolation yourself:
+
+1. Create the worktree: `git worktree add ../<repo>-plan-NNN -b plan/NNN-<slug>`.
+2. Write the full dispatch prompt (inlined plan + executor preamble + report format — exactly as above) to a temp file.
+3. Run the CLI in the worktree, non-interactively, prompt from the file. Any agent CLI with a headless one-shot mode works, e.g.:
+   - `claude -p "$(cat /tmp/dispatch.md)"` (Claude Code)
+   - `codex exec "$(cat /tmp/dispatch.md)"` (Codex CLI)
+   - `t2code exec "$(cat /tmp/dispatch.md)"` (t2 code)
+4. Capture stdout as the executor's report and review it exactly as below — same criteria re-runs, same scope check, same verdicts. For REVISE, re-invoke the CLI in the same worktree with the feedback appended (headless CLIs are stateless across invocations, so restate the plan context or reference the committed work).
+
+The economics are the point: the advisor plans on an expensive model, the CLI executes on a cheap one. Everything else in this file — untrusted-diff review, max 2 revision rounds, never merging yourself — applies unchanged.
+
 ### Review (the advisor's real job here)
 
 Note on fresh worktrees: they share git history but not `node_modules` or build artifacts — the executor must install dependencies first, and check tooling that resolves from `dist/` may need one build even though the plan's command table (recon'd in the main tree) didn't mention it. Expect this; it isn't a deviation.
