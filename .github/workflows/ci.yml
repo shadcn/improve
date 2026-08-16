@@ -1,0 +1,37 @@
+name: Validate plugin and marketplace
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code CLI
+        run: npm install --global @anthropic-ai/claude-code
+
+      # `claude plugin validate` auto-detects plugin vs marketplace manifests.
+      # --strict turns warnings (unknown/misspelled fields, missing metadata)
+      # into errors so CI fails on them.
+      - name: Validate plugin.json
+        run: claude plugin validate .claude-plugin/plugin.json --strict
+
+      # The same command validates the marketplace manifest: it checks schema
+      # errors, duplicate plugin names, and source path traversal (`..`).
+      - name: Validate marketplace.json
+        run: claude plugin validate .claude-plugin/marketplace.json --strict
