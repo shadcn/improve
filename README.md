@@ -2,12 +2,12 @@
 
 An agent skill that audits any codebase and writes implementation plans for other agents to execute.
 
-The idea: use your most capable model for the part where intelligence compounds — understanding the codebase, judging what's worth doing, writing the spec — and hand execution to cheaper models. The skill never implements anything itself. The plan is the product.
+The idea: use your most capable model for the part where intelligence compounds — understanding the codebase, judging what's worth doing, writing the spec — and hand execution to a separate agent. The skill never implements anything itself. The plan is the product. (Note: an executor subagent inherits your current model unless you configure a cheaper one explicitly.)
 
 ```
 you          →  /improve                    (expensive model, advises)
 plans/       →  001-fix-n-plus-one.md       (self-contained specs)
-other agent  →  implements, tests, ships    (cheap model, executes)
+other agent  →  implements, tests, ships    (executes — inherits your model)
 ```
 
 ## Install
@@ -29,7 +29,7 @@ Works in any agent that supports [Agent Skills](https://agentskills.io) format. 
 /improve next                   feature suggestions — where to take the project
 /improve plan <description>     skip the audit, spec one thing
 /improve review-plan <file>     critique and tighten an existing plan
-/improve execute <plan>         dispatch a cheaper executor, review its work
+/improve execute <plan>         dispatch an executor (inherits your model), review
 /improve reconcile              refresh the backlog: verify, unblock, retire
 /improve ... --issues           also publish plans as GitHub issues
 ```
@@ -41,7 +41,7 @@ A typical first run, start to finish:
 1. Open your agent in the repo and run `/improve` (or `/improve quick` to keep it cheap).
 2. It maps the repo, audits it, and comes back with a findings table. Reply with the ones you want planned — "plan 1, 3 and 5".
 3. Plans land in `plans/` — one file each, plus an index with the recommended order. Read them; they're meant to be reviewed.
-4. Hand a plan to any agent ("implement plans/001-*.md"), or let the skill run it: `/improve execute 001`. It dispatches a cheaper model in an isolated worktree, reviews the diff against the plan, and reports back with a verdict. Merging stays up to you.
+4. Hand a plan to any agent ("implement plans/001-*.md"), or let the skill run it: `/improve execute 001`. It dispatches an executor subagent in an isolated worktree, reviews the diff against the plan, and reports back with a verdict. Merging stays up to you.
 5. Next session, run `/improve reconcile` to clean up the backlog: verify what landed, refresh what drifted, unblock what got stuck.
 
 Before a PR, `/improve branch` does the same thing scoped to just what your branch changes.
@@ -93,7 +93,7 @@ Each plan also stamps the git commit it was written against, so executors run a 
 
 Plans aren't fire-and-forget:
 
-- **`execute <plan>`** spawns a cheaper executor subagent in an isolated git worktree, hands it the plan, then reviews the result like a tech lead — re-runs every done criterion, checks scope compliance, reads the diff against intent. Verdict: approve (merging stays your call), send back for revision (max 2 rounds), or block and refine the plan.
+- **`execute <plan>`** spawns an executor subagent in an isolated git worktree, hands it the plan, then reviews the result like a tech lead — re-runs every done criterion, checks scope compliance, reads the diff against intent. Verdict: approve (merging stays your call), send back for revision (max 2 rounds), or block and refine the plan.
 - **`reconcile`** processes what happened since: verifies DONE plans still hold, investigates BLOCKED ones and rewrites around the obstacle, refreshes drifted plans, retires findings that got fixed independently.
 - **`--issues`** publishes plans as GitHub issues — same self-contained body, so any agent or human can pick them up where work already lives.
 
