@@ -16,7 +16,15 @@ The founding rule survives unchanged: **the advisor never edits source code.** I
 
 ### Dispatch
 
-Spawn **one** `general-purpose` subagent with `isolation: "worktree"`. Executor model: default `sonnet`; use what the user named if they named one (`execute 003 haiku`).
+Spawn **one** `general-purpose` subagent with `isolation: "worktree"`.
+
+**Always set the executor's model explicitly — never omit it.** Most hosts
+inherit the advisor's model when the parameter is omitted, so the "cheaper
+executor" ends up running at advisor cost while the transcript still reads as a
+downgrade. Pick a tier meaningfully cheaper than the advisor's (in Claude Code:
+`sonnet` under an Opus advisor); use what the user named if they named one
+(`execute 003 <model>`). If your host cannot select a model per subagent, say
+so before dispatching rather than assuming the downgrade took effect.
 
 The subagent prompt must contain:
 
