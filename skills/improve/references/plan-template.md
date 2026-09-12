@@ -127,13 +127,24 @@ callers, then remove old path.)
 
 ## Done criteria
 
-Machine-checkable. ALL must hold:
+Machine-checkable. ALL must hold. Two layers — size the scoped layer to this
+plan's blast radius (a backend-only plan doesn't run the web build; a docs-only
+plan may have an empty full-gate layer):
+
+**Scoped** — run on every execution of this plan:
 
 - [ ] `pnpm typecheck` exits 0
-- [ ] `pnpm test` exits 0; new tests for <X> exist and pass
+- [ ] `pnpm test -- <filter>` exits 0; new tests for <X> exist and pass
 - [ ] `grep -rn "<old pattern>" src/` returns no matches
 - [ ] No files outside the in-scope list are modified (`git status`)
 - [ ] `plans/README.md` status row updated
+
+**Full gate** — the repo's complete verification suite, from recon. Run it when
+executing this plan standalone; in a dispatcher-driven batch the dispatcher
+runs it at checkpoints instead — do not repeat it per plan:
+
+- [ ] `pnpm build` exits 0
+- [ ] `pnpm test` exits 0 (full suite)
 
 ## STOP conditions
 
@@ -190,6 +201,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 
 - Could a model that has never seen this repo execute this with only the plan file and the repo? If any step requires knowledge from the advisor session, inline that knowledge.
 - Is every verification a command with an expected result, not a judgment ("make sure it works")?
+- Do the scoped done criteria cover this plan's actual blast radius, and does the full-gate layer list the repo's complete gate from recon — not a guess?
 - Does every step name exact files and symbols, not "the relevant module"?
 - Are the STOP conditions specific to this plan's actual risks, not boilerplate?
 - Would a reviewer reading only "Why this matters" + "Done criteria" understand what they're approving?
