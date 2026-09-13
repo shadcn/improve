@@ -1,0 +1,85 @@
+{
+  "name": "improve",
+  "displayName": "Improve — Codebase Audit & Planning",
+  "version": "1.0.0",
+  "description": "Adaptation of shadcn/improve agent skill for AGNT. Audits any codebase and writes prioritized, self-contained implementation plans for other agents to execute. Never edits source code — the plan is the product.",
+  "author": "shadcn (adapted by jacksonjp0311-gif)",
+  "icon": "search",
+  "homepage": "https://github.com/shadcn/improve",
+  "repository": "https://github.com/jacksonjp0311-gif/improve-AGNT",
+  "license": "MIT",
+  "tools": [
+    {
+      "type": "improve_audit",
+      "entryPoint": "./tools/improve-audit.js",
+      "schema": {
+        "title": "Audit Codebase",
+        "description": "Run a full or focused audit of a codebase directory. Maps the repo structure, conventions, build/test/lint commands, then scans for bugs, security issues, performance problems, test gaps, and tech debt. Returns a prioritized findings table with evidence (file:line references).",
+        "category": "action",
+        "icon": "search",
+        "parameters": {
+          "repo_path": { "type": "string", "required": true, "description": "Absolute path to the repository root to audit" },
+          "mode": { "type": "string", "inputType": "select", "description": "Audit depth", "options": ["quick", "full", "deep", "security", "perf", "tests", "bugs"], "default": "full" },
+          "focus_paths": { "type": "string", "description": "Optional comma-separated list of specific file or directory paths to scope the audit" }
+        }
+      }
+    },
+    {
+      "type": "improve_plan",
+      "entryPoint": "./tools/improve-plan.js",
+      "schema": {
+        "title": "Write Implementation Plan",
+        "description": "Given a finding or improvement description, produce a self-contained implementation plan in the shadcn/improve handoff format.",
+        "category": "action",
+        "icon": "file-text",
+        "parameters": {
+          "finding": { "type": "string", "inputType": "textarea", "required": true, "description": "The finding or improvement to plan" },
+          "repo_path": { "type": "string", "required": true, "description": "Absolute path to the repository root" },
+          "plan_number": { "type": "integer", "description": "Plan number for the NNN-slug.md filename", "default": 0 },
+          "output_dir": { "type": "string", "description": "Directory to write the plan file", "default": "" }
+        }
+      }
+    },
+    {
+      "type": "improve_reconcile",
+      "entryPoint": "./tools/improve-reconcile.js",
+      "schema": {
+        "title": "Reconcile Plan Backlog",
+        "description": "Scan the plans/ directory and reconcile the backlog: verify which plans landed, refresh drifted ones, unblock stuck plans, retire stale ones.",
+        "category": "action",
+        "icon": "refresh-cw",
+        "parameters": {
+          "repo_path": { "type": "string", "required": true, "description": "Absolute path to the repository root" },
+          "plans_dir": { "type": "string", "description": "Path to plans directory", "default": "" }
+        }
+      }
+    },
+    {
+      "type": "improve_review_plan",
+      "entryPoint": "./tools/improve-review-plan.js",
+      "schema": {
+        "title": "Review / Critique Plan",
+        "description": "Read an existing plan file and critique it against the shadcn/improve handoff template. Checks 10 dimensions.",
+        "category": "action",
+        "icon": "check-circle",
+        "parameters": {
+          "plan_path": { "type": "string", "required": true, "description": "Absolute path to the .md plan file to review" }
+        }
+      }
+    },
+    {
+      "type": "improve_branch_audit",
+      "entryPoint": "./tools/improve-branch-audit.js",
+      "schema": {
+        "title": "Audit Branch Changes",
+        "description": "Audit only what the current git branch changes compared to its base branch. Useful before a PR.",
+        "category": "action",
+        "icon": "git-branch",
+        "parameters": {
+          "repo_path": { "type": "string", "required": true, "description": "Absolute path to the repository root" },
+          "base_branch": { "type": "string", "description": "Branch to diff against", "default": "main" }
+        }
+      }
+    }
+  ]
+}
