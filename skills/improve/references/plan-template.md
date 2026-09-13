@@ -71,7 +71,10 @@ The facts the executor needs, inlined — never "as discussed" or "see audit":
 | Tests     | `pnpm test -- <filter>`  | all pass            |
 | Lint      | `pnpm lint`              | exit 0              |
 
-(Exact commands from this repo — verified during recon, not guessed.)
+(Exact commands from this repo — verified during recon, not guessed. The
+Install row applies only in a cold checkout or worktree — an executor
+dispatched into an already-provisioned tree confirms with the typecheck
+command instead of re-installing.)
 
 ## Suggested executor toolkit
 

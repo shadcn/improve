@@ -35,7 +35,21 @@ The subagent prompt must contain:
 > skipped, say so plainly. When finished, reply with exactly the report
 > format below.
 
-3. The report format:
+3. **A provisioning instruction — fresh worktrees are cold.** They share git history but not `node_modules` or build artifacts, and a cold install plus cold typecheck/build/test runs are minutes of pure overhead before the first plan step. Include the main checkout's absolute path and this block:
+
+> Provision your worktree before step 1 — never cold-install. Clone
+> dependencies from the main checkout at `<main tree path>`: `cp -Rc` (APFS
+> clone) on macOS, `cp -al` (hardlinks) on Linux, `robocopy /E` on Windows —
+> or, in pnpm repos, `pnpm install --prefer-offline` resolves from the
+> machine store. Copy ignored cache dirs too (`.next/cache`, `.turbo`,
+> `*.tsbuildinfo`). Clone or hardlink, never symlink `node_modules` —
+> symlinks break `.bin` resolution and file watchers. Then confirm the
+> toolchain with the plan's typecheck command before reaching for any
+> install. Expect one build regardless if check tooling resolves from
+> `dist/` — the plan's command table was recon'd in the main tree and won't
+> mention it; it isn't a deviation.
+
+4. The report format:
 
 ```
 STATUS: COMPLETE | STOPPED
@@ -46,8 +60,6 @@ NOTES: anything the reviewer should know (deviations, surprises, judgment calls)
 ```
 
 ### Review (the advisor's real job here)
-
-Note on fresh worktrees: they share git history but not `node_modules` or build artifacts — the executor must install dependencies first, and check tooling that resolves from `dist/` may need one build even though the plan's command table (recon'd in the main tree) didn't mention it. Expect this; it isn't a deviation.
 
 Review like a tech lead reviewing a PR against the spec — never fix anything yourself:
 
